@@ -82,9 +82,9 @@ const displayMovements = function (movements) {
 };
 
 //calculate balance and display it
-const calcPrintBalans = function (movements) {
-	const balance = movements.reduce((acc, curr) => acc + curr, 0);
-	labelBalance.textContent = `${balance} EUR`;
+const calcPrintBalans = function (account) {
+	account.balance = account.movements.reduce((acc, curr) => acc + curr, 0);
+	labelBalance.textContent = `${account.balance} EUR`;
 };
 
 //Calculate and display summary
@@ -134,9 +134,16 @@ const totalDepositsInUsd = movements
 
 const firstWithdrawal = movements.find((mov) => mov > 0);
 
+const updateUI = function (account) {
+	displayMovements(currentAccount.movements);
+	calcPrintBalans(currentAccount);
+	calcDisplaySummary(currentAccount);
+};
+
 let currentAccount;
 //Login
 btnLogin.addEventListener('click', function (e) {
+	//prevent Reload
 	e.preventDefault();
 
 	currentAccount = accounts.find(
@@ -147,11 +154,71 @@ btnLogin.addEventListener('click', function (e) {
 		labelWelcome.textContent = `Dobro došli, ${
 			currentAccount.owner.split(' ')[0]
 		}`;
+		containerApp.style.opacity = 100;
+		updateUI(currentAccount);
+		inputLoginUsername.value = '';
+		inputLoginPin.value = '';
+	} else {
+		alert('Pogresni podaci!');
 	}
-	containerApp.style.opacity = 100;
-	displayMovements(currentAccount.movements);
-	calcPrintBalans(currentAccount.movements);
-	calcDisplaySummary(currentAccount);
-	inputLoginUsername.value = '';
-	inputLoginPin.value = '';
+});
+
+//transfer of money
+btnTransfer.addEventListener('click', function (e) {
+	e.preventDefault();
+	const amount = Number(inputTransferAmount.value);
+	const receiverAccount = accounts.find(
+		(acc) => acc.username === inputTransferTo.value
+	);
+
+	if (
+		amount > 0 &&
+		receiverAccount &&
+		currentAccount.balance >= amount &&
+		receiverAccount?.username !== currentAccount.username
+	) {
+		currentAccount.movements.push(-amount);
+		receiverAccount.movements.push(amount);
+		inputTransferAmount.value = '';
+		inputTransferTo.value = '';
+		updateUI(currentAccount);
+	} else {
+		alert(
+			'Greska,proverite podatke o primaocu ili kolicinu novca koju saljete!'
+		);
+	}
+});
+
+//loan
+btnLoan.addEventListener('click', function (e) {
+	e.preventDefault();
+	const amount = Number(inputLoanAmount.value);
+
+	if (
+		amount > 0 &&
+		currentAccount.movements.some((mov) => mov >= amount * 0.1)
+	) {
+		currentAccount.movements.push(amount);
+		inputLoanAmount.value = '';
+		updateUI(currentAccount);
+	} else {
+		alert('Proverite kolicinu i da li zadovoljavate uslove kredita!');
+	}
+});
+
+//close account
+btnClose.addEventListener('click', function (e) {
+	e.preventDefault();
+
+	if (
+		currentAccount.username === inputCloseUsername.value &&
+		currentAccount.pin === Number(inputClosePin.value)
+	) {
+		const index = accounts.findIndex(
+			(acc) => acc.username === currentAccount.username
+		);
+		accounts.splice(index, 1);
+		containerApp.style.opacity = 0;
+		labelWelcome.textContent = 'Prijavite se za početak';
+	}
 });
