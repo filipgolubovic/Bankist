@@ -65,9 +65,12 @@ const currencies = new Map([
 const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
 
 //display all movements
-const displayMovements = function (movements) {
+const displayMovements = function (movements, sort = false) {
 	containerMovements.innerHTML = '';
-	movements.forEach(function (mov, i) {
+
+	const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+
+	movs.forEach(function (mov, i) {
 		const type = mov > 0 ? 'deposit' : 'withdrawal';
 		const html = `<div class="movements__row">
         <div class="movements__type movements__type--${type}">
@@ -221,4 +224,12 @@ btnClose.addEventListener('click', function (e) {
 		containerApp.style.opacity = 0;
 		labelWelcome.textContent = 'Prijavite se za početak';
 	}
+});
+
+let sorted = false;
+
+btnSort.addEventListener('click', function (e) {
+	e.preventDefault();
+	displayMovements(currentAccount.movements, !sorted);
+	sorted = !sorted;
 });
