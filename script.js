@@ -3,6 +3,16 @@
 const account1 = {
 	owner: 'Filip Golubovic',
 	movements: [200, 450, -400, 3000, -650, -130, 70, 1300],
+	movementsDates: [
+		'2019-11-18T21:31:17.178Z',
+		'2019-12-23T07:42:02.383Z',
+		'2020-01-28T09:15:04.904Z',
+		'2020-04-01T10:17:24.185Z',
+		'2020-05-08T14:11:59.604Z',
+		'2020-05-27T17:01:17.194Z',
+		'2020-07-11T23:36:17.929Z',
+		'2020-07-12T10:51:36.790Z',
+	],
 	interestRate: 1.2, // %
 	pin: 1111,
 };
@@ -10,25 +20,21 @@ const account1 = {
 const account2 = {
 	owner: 'Jovana Jovanovic',
 	movements: [5000, 3400, -150, -790, -3210, -1000, 8500, -30],
+	movementsDates: [
+		'2019-11-01T13:15:33.035Z',
+		'2019-11-30T09:48:16.867Z',
+		'2019-12-25T06:04:23.907Z',
+		'2020-01-25T14:18:46.235Z',
+		'2020-02-05T16:33:06.386Z',
+		'2020-04-10T14:43:26.374Z',
+		'2020-06-25T18:49:59.371Z',
+		'2020-07-26T12:01:20.894Z',
+	],
 	interestRate: 1.5,
 	pin: 2222,
 };
 
-const account3 = {
-	owner: 'Marko Mare Petrovic',
-	movements: [200, -200, 340, -300, -20, 50, 400, -460],
-	interestRate: 0.7,
-	pin: 3333,
-};
-
-const account4 = {
-	owner: 'Sara Mitic',
-	movements: [430, 1000, 700, 50, 90],
-	interestRate: 1,
-	pin: 4444,
-};
-
-const accounts = [account1, account2, account3, account4];
+const accounts = [account1, account2];
 
 // Elementi
 const labelWelcome = document.querySelector('.welcome');
@@ -65,18 +71,29 @@ const currencies = new Map([
 const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
 
 //display all movements
-const displayMovements = function (movements, sort = false) {
+const displayMovements = function (acc, sort = false) {
 	containerMovements.innerHTML = '';
 
-	const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
+	const movs = sort
+		? acc.movements.slice().sort((a, b) => a - b)
+		: acc.movements;
 
 	movs.forEach(function (mov, i) {
 		const type = mov > 0 ? 'deposit' : 'withdrawal';
+
+		const date = new Date(acc.movementsDates[i]);
+
+		const day = `${date.getDate()}`.padStart(2, 0);
+		const month = `${date.getMonth() + 1}`.padStart(2, 0);
+		const year = date.getFullYear();
+
+		const displayDate = `${day}/${month}/${year}`;
+
 		const html = `<div class="movements__row">
         <div class="movements__type movements__type--${type}">
             ${i + 1} ${type}
         </div>
-        <div class="movements__date"></div>
+        <div class="movements__date">${displayDate}</div>
         <div class="movements__value">${mov}€</div>
         </div>`;
 
@@ -138,12 +155,25 @@ const totalDepositsInUsd = movements
 const firstWithdrawal = movements.find((mov) => mov > 0);
 
 const updateUI = function (account) {
-	displayMovements(currentAccount.movements);
+	displayMovements(currentAccount);
 	calcPrintBalans(currentAccount);
 	calcDisplaySummary(currentAccount);
+	displayDate();
 };
 
 let currentAccount;
+let timer;
+//display current date
+function displayDate() {
+	const currentDate = new Date();
+	const day = `${currentDate.getDate()}`.padStart(2, 0);
+	const month = `${currentDate.getMonth() + 1}`.padStart(2, 0);
+	const year = currentDate.getFullYear();
+	const hour = `${currentDate.getHours()}`.padStart(2, 0);
+	const min = `${currentDate.getMinutes()}`.padStart(2, 0);
+	labelDate.textContent = `${day}/${month}/${year}, ${hour}:${min}`;
+}
+
 //Login
 btnLogin.addEventListener('click', function (e) {
 	//prevent Reload
@@ -158,6 +188,10 @@ btnLogin.addEventListener('click', function (e) {
 			currentAccount.owner.split(' ')[0]
 		}`;
 		containerApp.style.opacity = 100;
+
+		if (timer) clearInterval(timer);
+		timer = startLogoutTimer();
+
 		updateUI(currentAccount);
 		inputLoginUsername.value = '';
 		inputLoginPin.value = '';
@@ -182,15 +216,40 @@ btnTransfer.addEventListener('click', function (e) {
 	) {
 		currentAccount.movements.push(-amount);
 		receiverAccount.movements.push(amount);
+
+		currentAccount.movementsDates.push(new Date().toISOString());
+		receiverAccount.movementsDates.push(new Date().toISOString());
+
 		inputTransferAmount.value = '';
 		inputTransferTo.value = '';
+
 		updateUI(currentAccount);
+		clearInterval(timer);
+		timer = startLogoutTimer();
 	} else {
 		alert(
 			'Greska,proverite podatke o primaocu ili kolicinu novca koju saljete!'
 		);
 	}
 });
+const startLogoutTimer = function () {
+	let time = 300;
+	const tick = function () {
+		const min = String(Math.trunc(time / 60)).padStart(2, 0);
+		const sec = String(time % 60).padStart(2, 0);
+		labelTimer.textContent = `${min}:${sec}`;
+
+		if (time === 0) {
+			clearInterval(timer);
+			containerApp.style.opacity = 0;
+			labelWelcome.textContent = 'Prijavite se za pocetak';
+		}
+		time--;
+	};
+	tick();
+	const timer = setInterval(tick, 1000);
+	return timer;
+};
 
 //loan
 btnLoan.addEventListener('click', function (e) {
@@ -201,9 +260,16 @@ btnLoan.addEventListener('click', function (e) {
 		amount > 0 &&
 		currentAccount.movements.some((mov) => mov >= amount * 0.1)
 	) {
-		currentAccount.movements.push(amount);
-		inputLoanAmount.value = '';
-		updateUI(currentAccount);
+		setTimeout(function () {
+			currentAccount.movements.push(amount);
+			currentAccount.movementsDates.push(new Date().toISOString());
+
+			inputLoanAmount.value = '';
+
+			updateUI(currentAccount);
+			clearInterval(timer);
+			timer = startLogoutTimer();
+		}, 2500);
 	} else {
 		alert('Proverite kolicinu i da li zadovoljavate uslove kredita!');
 	}
